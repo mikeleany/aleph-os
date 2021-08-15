@@ -1,3 +1,10 @@
+//  Copyright 2021 Michael Leany
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
 //! Provides a [panic handler] for the kernel.
 //!
 //! Rust requires each binary to have exactly one panic handler. Usually the panic handler is
