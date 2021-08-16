@@ -9,6 +9,9 @@
 //!
 //! [BOOTBOOT]: https://gitlab.com/bztsrc/bootboot
 
+mod framebuffer;
+pub use framebuffer::Console;
+
 extern "C" {
     /// The BOOTBOOT information structure.
     ///

@@ -13,8 +13,8 @@ use embedded_graphics::{
     pixelcolor::Rgb888,
 };
 use lazy_static::lazy_static;
-use spin::Mutex;
-use crate::bootboot::{
+use spin::{Mutex, MutexGuard};
+use super::{
     BOOTBOOT,
     FRAMEBUFFER,
     PixelFormat,
@@ -22,40 +22,31 @@ use crate::bootboot::{
 
 lazy_static! {
     /// The main framebuffer, which was setup by the BOOTBOOT loader.
-    static ref CONSOLE: Framebuffer = Framebuffer {
-        // SAFETY:
-        // - kernel must be loaded by a BOOTBOOT-compliant loader
-        // - all accesses to `FRAMEBUFFER` are synchronized through `CONSOLE`
-        // - `FRAMEBUFFER` must be valid for `BOOTBOOT.fb_size` bytes
-        // - all values are valid for `RawPixel`
-        buffer: Mutex::new(unsafe { slice::from_raw_parts_mut(
-            FRAMEBUFFER.as_mut_ptr().cast::<RawPixel>(),
-            BOOTBOOT.fb_size as usize / size_of::<RawPixel>())}),
+    pub static ref CONSOLE: Console = Console(Mutex::new(
+        Framebuffer {
+            // SAFETY:
+            // - kernel must be loaded by a BOOTBOOT-compliant loader
+            // - all accesses to `FRAMEBUFFER` are synchronized through `CONSOLE`
+            // - `FRAMEBUFFER` must be valid for `BOOTBOOT.fb_size` bytes
+            // - all values are valid for `RawPixel`
+            buffer: unsafe { slice::from_raw_parts_mut(
+                FRAMEBUFFER.as_mut_ptr().cast::<RawPixel>(),
+                BOOTBOOT.fb_size as usize / size_of::<RawPixel>())},
 
-        size: Size{ width: BOOTBOOT.fb_width, height: BOOTBOOT.fb_height },
-        pitch: BOOTBOOT.fb_scanline / size_of::<RawPixel>() as u32,
-        pixel_format: BOOTBOOT.pixel_format(),
-    };
+            size: Size{ width: BOOTBOOT.fb_width, height: BOOTBOOT.fb_height },
+            pitch: BOOTBOOT.fb_scanline / size_of::<RawPixel>() as u32,
+            pixel_format: BOOTBOOT.pixel_format(),
+        }
+    ));
 }
 
-/// A zero-sized type which gives access to the main framebuffer.
-pub struct Console;
+/// A synchronized framebuffer.
+pub struct Console(Mutex<Framebuffer>);
 
-impl OriginDimensions for Console {
-    fn size(&self) -> Size {
-        CONSOLE.size()
-    }
-}
-
-impl DrawTarget for Console {
-    type Color = Rgb888;
-    type Error = core::convert::Infallible;
-
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Pixel<Self::Color>>
-    {
-        CONSOLE.draw_pixels(pixels)
+impl Console {
+    /// Returns exclusive access to the main [`Framebuffer`].
+    pub fn get() -> MutexGuard<'static, Framebuffer> {
+        CONSOLE.0.lock()
     }
 }
 
@@ -81,7 +72,7 @@ impl RawPixel {
 /// The video memory and metadata used for writing and drawing to a screen.
 pub struct Framebuffer {
     /// The memory buffer where pixel data is written.
-    buffer: Mutex<&'static mut [RawPixel]>,
+    buffer: &'static mut [RawPixel],
     /// The dimensions of the display in pixels.
     size: Size,
     /// The in-memory width (in pixels) of a row of pixels. Some bytes may be unused.
@@ -101,26 +92,6 @@ impl Framebuffer {
         self.cursor.store(cursor, Ordering::Relaxed);
     }
     */
-
-    /// Draws pixels to the screen.
-    fn draw_pixels<I>(&self, pixels: I) -> Result<(), <Self as DrawTarget>::Error>
-    where
-        I: IntoIterator<Item = Pixel<<Self as DrawTarget>::Color>>
-    {
-        let mut buffer = self.buffer.lock();
-
-        for Pixel(point, color) in pixels {
-            if self.bounding_box().contains(point) {
-                let index = point.y as usize * self.pitch as usize + point.x as usize;
-                // SAFETY: casting a mutable reference to a pointer and writing to it is just
-                // as safe as writing directly to the mutable reference.
-                unsafe { ((&mut buffer[index] as *mut RawPixel)
-                          .write_volatile(RawPixel::from_color(color, self.pixel_format))); }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl OriginDimensions for Framebuffer {
@@ -137,6 +108,16 @@ impl DrawTarget for Framebuffer {
     where
         I: IntoIterator<Item = Pixel<Self::Color>>
     {
-        self.draw_pixels(pixels)
+        for Pixel(point, color) in pixels {
+            if self.bounding_box().contains(point) {
+                let index = point.y as usize * self.pitch as usize + point.x as usize;
+                // SAFETY: casting a mutable reference to a pointer and writing to it is just
+                // as safe as writing directly to the mutable reference.
+                unsafe { ((&mut self.buffer[index] as *mut RawPixel)
+                          .write_volatile(RawPixel::from_color(color, self.pixel_format))); }
+            }
+        }
+
+        Ok(())
     }
 }

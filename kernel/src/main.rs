@@ -8,6 +8,7 @@
 #![doc = include_str!("../README.md")]
 #![no_std]
 #![no_main]
+use core::ops::DerefMut as _;
 use embedded_graphics::{
     prelude::*,
     image::Image,
@@ -24,8 +25,7 @@ use tinytga::DynamicTga;
 #[cfg(not(test))]
 mod panic_handler;
 mod bootboot;
-mod framebuffer;
-use framebuffer::Console;
+use bootboot::Console;
 
 /// The kernel's entry point.
 ///
@@ -37,14 +37,14 @@ use framebuffer::Console;
 fn main() -> ! {
     let tga = DynamicTga::<Rgb888>::from_slice(include_bytes!("../assets/aleph-os.tga")).unwrap();
     let image = Image::new(&tga, Point::new(12, 0));
-    image.draw(&mut Console).expect("display of TGA image");
+    image.draw(Console::get().deref_mut()).expect("display of TGA image");
 
     let char_style = MonoTextStyle::new(&FONT_10X20, Rgb888::WHITE);
     let line = Text::new(
         "  The Aleph Operating System\n",
         Point::zero() + image.bounding_box().size.y_axis(),
         char_style);
-    line.draw(&mut Console).expect("printing text");
+    line.draw(Console::get().deref_mut()).expect("printing text");
 
     panic!("testing the panic handler");
 }
