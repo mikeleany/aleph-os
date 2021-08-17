@@ -43,7 +43,7 @@ extern "C" {
 
 /// A safe reference to the BOOTBOOT information structure.
 // SAFETY: the kernel must be loaded by a BOOTBOOT-compliant loader
-pub static BOOTBOOT: &'static Bootboot = unsafe { &BOOTBOOT_EXT };
+pub static BOOTBOOT: &Bootboot = unsafe { &BOOTBOOT_EXT };
 
 /// The color format for a pixel in the [`FRAMEBUFFER`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -132,7 +132,6 @@ pub struct ArchX86_64 {
     pub mp_ptr: u64,
     _unused: [u64; 4],
 }
-
 
 /// AArch64-specific fields of the BOOTBOOT information structure.
 #[repr(C)]

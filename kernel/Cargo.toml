@@ -11,6 +11,13 @@ cargo-features = ["edition2021"]
 name = "aleph-os"
 version = "0.1.0"
 edition = "2021"
+authors = ["Mike Leany"]
+description = "The kernel for the Aleph Operating System"
+readme = "README.md"
+license = "MPL-2.0"
+repository = "https://github.com/mikeleany/aleph-os"
+keywords = ["kernel", "osdev"]
+categories = ["os", "no-std", "embedded"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

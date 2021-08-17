@@ -6,24 +6,22 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //! Provides a means of writing and drawing to the screen.
-use core::fmt::{self, Write};
-use core::mem::size_of;
-use core::ops::{ Deref as _, DerefMut as _ };
-use core::slice;
+use super::{PixelFormat, BOOTBOOT, FRAMEBUFFER};
+use core::{
+    fmt::{self, Write},
+    mem::size_of,
+    ops::{Deref as _, DerefMut as _},
+    slice,
+};
 use embedded_graphics::{
-    prelude::*,
-    mono_font::{ MonoFont, MonoTextStyle },
+    mono_font::{MonoFont, MonoTextStyle},
     pixelcolor::Rgb888,
+    prelude::*,
     text::Text,
 };
 use lazy_static::lazy_static;
-use log::{Log, Level, LevelFilter};
+use log::{Level, LevelFilter, Log};
 use spin::{Mutex, MutexGuard};
-use super::{
-    BOOTBOOT,
-    FRAMEBUFFER,
-    PixelFormat,
-};
 
 lazy_static! {
     /// The main framebuffer, which was setup by the BOOTBOOT loader.
@@ -62,8 +60,7 @@ pub struct Console {
 
 impl Console {
     pub fn init() -> Result<(), log::SetLoggerError> {
-        log::set_logger(CONSOLE.deref())
-            .map(|()| log::set_max_level(LevelFilter::Debug))
+        log::set_logger(CONSOLE.deref()).map(|()| log::set_max_level(LevelFilter::Debug))
     }
 
     /// Returns exclusive access to the main [`Framebuffer`].
@@ -83,8 +80,13 @@ impl Log for Console {
                 writeln!(self.fb.lock().deref_mut(), "{}", record.args())
                     .expect("write log message");
             } else {
-                writeln!(self.fb.lock().deref_mut(), "{}: {}", record.level(), record.args())
-                    .expect("write log message");
+                writeln!(
+                    self.fb.lock().deref_mut(),
+                    "{}: {}",
+                    record.level(),
+                    record.args()
+                )
+                .expect("write log message");
             }
         }
     }
@@ -163,15 +165,17 @@ impl DrawTarget for Framebuffer {
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
-        I: IntoIterator<Item = Pixel<Self::Color>>
+        I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
             if self.bounding_box().contains(point) {
                 let index = point.y as usize * self.pitch as usize + point.x as usize;
                 // SAFETY: casting a mutable reference to a pointer and writing to it is just
                 // as safe as writing directly to the mutable reference.
-                unsafe { ((&mut self.buffer[index] as *mut RawPixel)
-                          .write_volatile(RawPixel::from_color(color, self.pixel_format))); }
+                unsafe {
+                    ((&mut self.buffer[index] as *mut RawPixel)
+                        .write_volatile(RawPixel::from_color(color, self.pixel_format)));
+                }
             }
         }
 
@@ -190,7 +194,8 @@ impl Write for Framebuffer {
             if c.is_control() {
                 if let Some(si) = start_index {
                     Text::new(&s[si..i], self.cursor_pixel(), char_style)
-                        .draw(self).expect("draw text");
+                        .draw(self)
+                        .expect("draw text");
                     start_index = None;
                     self.cursor.x += char_count as i32;
                     char_count = 0;
@@ -200,22 +205,24 @@ impl Write for Framebuffer {
                     '\t' => {
                         let spaces = &Self::TAB[self.cursor.x as usize % Self::TAB.len()..];
                         Text::new(spaces, self.cursor_pixel(), char_style)
-                            .draw(self).expect("draw spaces");
+                            .draw(self)
+                            .expect("draw spaces");
                         self.cursor.x += spaces.len() as i32;
-                    },
+                    }
                     '\n' => {
                         self.cursor.x = 0;
                         self.cursor.y += 1;
                         // TODO: scrolling
-                    },
-                    _ => { /*ignored */ },
+                    }
+                    _ => { /*ignored */ }
                 }
             } else {
                 char_count += 1;
                 if self.cursor.x as u32 + char_count > self.max_chars.width {
                     if let Some(si) = start_index {
                         Text::new(&s[si..i], self.cursor_pixel(), char_style)
-                            .draw(self).expect("draw text");
+                            .draw(self)
+                            .expect("draw text");
                         start_index = Some(i);
                         char_count = 1;
                     }
@@ -231,7 +238,8 @@ impl Write for Framebuffer {
 
         if let Some(si) = start_index {
             Text::new(&s[si..], self.cursor_pixel(), char_style)
-                .draw(self).expect("drawing text");
+                .draw(self)
+                .expect("drawing text");
             self.cursor.x += char_count as i32;
         }
 

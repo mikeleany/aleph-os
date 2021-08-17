@@ -20,6 +20,7 @@ $(outdir)aleph-os-$(arch).img: aleph-os-image.json aleph-os.conf $(kernel-target
 	cd $(outdir) && mkbootimg aleph-os-image.json aleph-os-$(arch).img
 
 $(kernel-target-dir)aleph-os.kernel $(kernel-target-dir)aleph-os.d: kernel/Cargo.toml
+	cargo clippy -Z build-std=core,alloc --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
 	cargo build -Z build-std=core,alloc --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
 
 include $(kernel-target-dir)aleph-os.d

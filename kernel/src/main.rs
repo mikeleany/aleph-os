@@ -6,25 +6,32 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #![doc = include_str!("../README.md")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/mikeleany/aleph-os/main/images/aleph-os.png"
+)]
 #![no_std]
 #![no_main]
+#![deny(unaligned_references)]
+#![deny(unsafe_op_in_unsafe_fn)]
+#![warn(missing_debug_implementations)]
+#![warn(missing_docs)]
+#![warn(unused_extern_crates)]
+#![warn(clippy::todo)]
+#![warn(clippy::unwrap_used)]
 use core::ops::DerefMut as _;
 use embedded_graphics::{
-    prelude::*,
     image::Image,
-    mono_font::{
-        MonoTextStyle,
-        iso_8859_1::FONT_10X20,
-    },
+    mono_font::{iso_8859_1::FONT_10X20, MonoTextStyle},
     pixelcolor::Rgb888,
+    prelude::*,
     text::Text,
 };
 use rlibc as _; // needed for `memcpy`, etc when using `--build-std`
 use tinytga::DynamicTga;
 
+mod bootboot;
 #[cfg(not(test))]
 mod panic_handler;
-mod bootboot;
 use bootboot::Console;
 
 /// The kernel's entry point.
@@ -44,15 +51,19 @@ fn main() -> ! {
     let tga = DynamicTga::<Rgb888>::from_slice(include_bytes!("../assets/aleph-os.tga"))
         .expect("load TGA image");
     let image = Image::new(&tga, Point::new(12, 0));
-    image.draw(Console::get().deref_mut()).expect("display TGA image");
+    image
+        .draw(Console::get().deref_mut())
+        .expect("display TGA image");
 
     // print some text in a specific font and location
     let char_style = MonoTextStyle::new(&FONT_10X20, Rgb888::WHITE);
     let line = Text::new(
         "  The Aleph Operating System\n",
         Point::zero() + image.bounding_box().size.y_axis(),
-        char_style);
-    line.draw(Console::get().deref_mut()).expect("printing text");
+        char_style,
+    );
+    line.draw(Console::get().deref_mut())
+        .expect("printing text");
 
     log::info!("Hello world!");
     panic!("testing the panic handler");
