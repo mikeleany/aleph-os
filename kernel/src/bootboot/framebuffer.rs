@@ -6,8 +6,9 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //! Provides a means of writing and drawing to the screen.
-use core::fmt;
+use core::fmt::{self, Write};
 use core::mem::size_of;
+use core::ops::{ Deref as _, DerefMut as _ };
 use core::slice;
 use embedded_graphics::{
     prelude::*,
@@ -16,6 +17,7 @@ use embedded_graphics::{
     text::Text,
 };
 use lazy_static::lazy_static;
+use log::{Log, Level, LevelFilter};
 use spin::{Mutex, MutexGuard};
 use super::{
     BOOTBOOT,
@@ -25,8 +27,8 @@ use super::{
 
 lazy_static! {
     /// The main framebuffer, which was setup by the BOOTBOOT loader.
-    pub static ref CONSOLE: Console = Console(Mutex::new(
-        Framebuffer {
+    pub static ref CONSOLE: Console = Console {
+        fb: Mutex::new(Framebuffer {
             // SAFETY:
             // - kernel must be loaded by a BOOTBOOT-compliant loader
             // - all accesses to `FRAMEBUFFER` are synchronized through `CONSOLE`
@@ -46,19 +48,48 @@ lazy_static! {
             },
             cursor: Point::zero(),
             text_color: Rgb888::CSS_GRAY,
-        }
-    ));
+        }),
+        level: LevelFilter::Debug,
+    };
 }
 
 /// A synchronized framebuffer.
 #[derive(Debug)]
-pub struct Console(Mutex<Framebuffer>);
+pub struct Console {
+    fb: Mutex<Framebuffer>,
+    level: LevelFilter,
+}
 
 impl Console {
+    pub fn init() -> Result<(), log::SetLoggerError> {
+        log::set_logger(CONSOLE.deref())
+            .map(|()| log::set_max_level(LevelFilter::Debug))
+    }
+
     /// Returns exclusive access to the main [`Framebuffer`].
     pub fn get() -> MutexGuard<'static, Framebuffer> {
-        CONSOLE.0.lock()
+        CONSOLE.fb.lock()
     }
+}
+
+impl Log for Console {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= self.level
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            if record.level() >= Level::Info {
+                writeln!(self.fb.lock().deref_mut(), "{}", record.args())
+                    .expect("write log message");
+            } else {
+                writeln!(self.fb.lock().deref_mut(), "{}: {}", record.level(), record.args())
+                    .expect("write log message");
+            }
+        }
+    }
+
+    fn flush(&self) {}
 }
 
 /// The raw pixel data as it appears in the framebuffer.
@@ -148,7 +179,7 @@ impl DrawTarget for Framebuffer {
     }
 }
 
-impl fmt::Write for Framebuffer {
+impl Write for Framebuffer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let char_style = MonoTextStyle::new(&Framebuffer::FONT, self.text_color);
 

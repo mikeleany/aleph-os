@@ -35,10 +35,18 @@ use bootboot::Console;
 /// [`no_main`]: https://doc.rust-lang.org/stable/reference/crates-and-source-files.html#the-no_main-attribute
 #[export_name = "_start"]
 fn main() -> ! {
-    let tga = DynamicTga::<Rgb888>::from_slice(include_bytes!("../assets/aleph-os.tga")).unwrap();
-    let image = Image::new(&tga, Point::new(12, 0));
-    image.draw(Console::get().deref_mut()).expect("display of TGA image");
+    // set the cursor after the image and custom text which are displayed below
+    Console::get().set_cursor(Point::new(0, 11));
+    // initialize the logger
+    Console::init().expect("init logger");
 
+    // display an image
+    let tga = DynamicTga::<Rgb888>::from_slice(include_bytes!("../assets/aleph-os.tga"))
+        .expect("load TGA image");
+    let image = Image::new(&tga, Point::new(12, 0));
+    image.draw(Console::get().deref_mut()).expect("display TGA image");
+
+    // print some text in a specific font and location
     let char_style = MonoTextStyle::new(&FONT_10X20, Rgb888::WHITE);
     let line = Text::new(
         "  The Aleph Operating System\n",
@@ -46,10 +54,6 @@ fn main() -> ! {
         char_style);
     line.draw(Console::get().deref_mut()).expect("printing text");
 
-    Console::get().set_cursor(Point::new(0, 11));
-
-    use core::fmt::Write;
-    writeln!(Console::get().deref_mut(), "Hello world!").expect("print to screen");
-
+    log::info!("Hello world!");
     panic!("testing the panic handler");
 }
