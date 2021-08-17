@@ -46,5 +46,10 @@ fn main() -> ! {
         char_style);
     line.draw(Console::get().deref_mut()).expect("printing text");
 
+    Console::get().set_cursor(Point::new(0, 11));
+
+    use core::fmt::Write;
+    writeln!(Console::get().deref_mut(), "Hello world!").expect("print to screen");
+
     panic!("testing the panic handler");
 }

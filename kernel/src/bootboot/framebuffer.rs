@@ -6,11 +6,14 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //! Provides a means of writing and drawing to the screen.
+use core::fmt;
 use core::mem::size_of;
 use core::slice;
 use embedded_graphics::{
     prelude::*,
+    mono_font::{ MonoFont, MonoTextStyle },
     pixelcolor::Rgb888,
+    text::Text,
 };
 use lazy_static::lazy_static;
 use spin::{Mutex, MutexGuard};
@@ -36,11 +39,19 @@ lazy_static! {
             size: Size{ width: BOOTBOOT.fb_width, height: BOOTBOOT.fb_height },
             pitch: BOOTBOOT.fb_scanline / size_of::<RawPixel>() as u32,
             pixel_format: BOOTBOOT.pixel_format(),
+
+            max_chars: Size {
+                width: BOOTBOOT.fb_width / Framebuffer::FONT_SIZE.width,
+                height: BOOTBOOT.fb_height / Framebuffer::FONT_SIZE.height,
+            },
+            cursor: Point::zero(),
+            text_color: Rgb888::CSS_GRAY,
         }
     ));
 }
 
 /// A synchronized framebuffer.
+#[derive(Debug)]
 pub struct Console(Mutex<Framebuffer>);
 
 impl Console {
@@ -70,6 +81,7 @@ impl RawPixel {
 }
 
 /// The video memory and metadata used for writing and drawing to a screen.
+#[derive(Debug)]
 pub struct Framebuffer {
     /// The memory buffer where pixel data is written.
     buffer: &'static mut [RawPixel],
@@ -79,19 +91,33 @@ pub struct Framebuffer {
     pitch: u32,
     /// The format of the pixels.
     pixel_format: PixelFormat,
+
+    /// The dimensions of the display in characters.
+    max_chars: Size,
+    /// The cursor location in characters.
+    cursor: Point,
+    /// The foreground color to use when printing text.
+    text_color: Rgb888,
 }
 
 impl Framebuffer {
-    /*
+    const FONT: MonoFont<'static> = embedded_graphics::mono_font::iso_8859_1::FONT_9X15;
+    const FONT_SIZE: Size = Size {
+        width: Self::FONT.character_size.width + Self::FONT.character_spacing,
+        height: Self::FONT.character_size.height,
+    };
+    const TAB: &'static str = "        ";
+
+    pub fn cursor_pixel(&self) -> Point {
+        self.cursor.component_mul(Point::zero() + Self::FONT_SIZE)
+    }
+
     /// Sets the position of the cursor, where `cursor.x` and `cursor.y` indicate the number of
     /// characters horizontally and vertically, respectively, from the top-left corner of the
     /// screen.
     pub fn set_cursor(&mut self, cursor: Point) {
-        assert!(cursor.x >= 0 && cursor.y >= 0);
-        let cursor = ((cursor.y << 16) + cursor.x) as u32;
-        self.cursor.store(cursor, Ordering::Relaxed);
+        self.cursor = cursor;
     }
-    */
 }
 
 impl OriginDimensions for Framebuffer {
@@ -116,6 +142,66 @@ impl DrawTarget for Framebuffer {
                 unsafe { ((&mut self.buffer[index] as *mut RawPixel)
                           .write_volatile(RawPixel::from_color(color, self.pixel_format))); }
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Write for Framebuffer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let char_style = MonoTextStyle::new(&Framebuffer::FONT, self.text_color);
+
+        let mut start_index = None;
+        let mut char_count = 0;
+
+        for (i, c) in s.char_indices() {
+            if c.is_control() {
+                if let Some(si) = start_index {
+                    Text::new(&s[si..i], self.cursor_pixel(), char_style)
+                        .draw(self).expect("draw text");
+                    start_index = None;
+                    self.cursor.x += char_count as i32;
+                    char_count = 0;
+                }
+
+                match c {
+                    '\t' => {
+                        let spaces = &Self::TAB[self.cursor.x as usize % Self::TAB.len()..];
+                        Text::new(spaces, self.cursor_pixel(), char_style)
+                            .draw(self).expect("draw spaces");
+                        self.cursor.x += spaces.len() as i32;
+                    },
+                    '\n' => {
+                        self.cursor.x = 0;
+                        self.cursor.y += 1;
+                        // TODO: scrolling
+                    },
+                    _ => { /*ignored */ },
+                }
+            } else {
+                char_count += 1;
+                if self.cursor.x as u32 + char_count > self.max_chars.width {
+                    if let Some(si) = start_index {
+                        Text::new(&s[si..i], self.cursor_pixel(), char_style)
+                            .draw(self).expect("draw text");
+                        start_index = Some(i);
+                        char_count = 1;
+                    }
+
+                    self.cursor.x = 0;
+                    self.cursor.y += 1;
+                    // TODO: scrolling
+                } else {
+                    start_index.get_or_insert(i);
+                }
+            }
+        }
+
+        if let Some(si) = start_index {
+            Text::new(&s[si..], self.cursor_pixel(), char_style)
+                .draw(self).expect("drawing text");
+            self.cursor.x += char_count as i32;
         }
 
         Ok(())
