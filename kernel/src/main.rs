@@ -6,9 +6,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #![doc = include_str!("../README.md")]
-#![doc(
-    html_logo_url = "https://raw.githubusercontent.com/mikeleany/aleph-os/main/images/aleph-os.png"
-)]
+#![doc(html_logo_url = "https://mikeleany.github.io/images/aleph-os.png")]
 #![no_std]
 #![no_main]
 #![deny(unaligned_references)]
