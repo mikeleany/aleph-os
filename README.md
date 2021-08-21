@@ -2,6 +2,8 @@
 
 The Aleph Operating System, or Aleph OS, is a hobby operating system written in Rust. It is the successor to [Myros]. It is dual-platform, running on x86-64 PCs and Raspberry Pi 3 and 4. Note that PC builds do not currently have legacy BIOS boot support.
 
+**WARNING: Aleph OS is provided without warranty of any kind (see [LICENSE](LICENSE)). I take no responsibility if running Aleph OS on real hardware bricks or otherwise damages your device.**
+
 [Myros]: https://mikeleany.github.io/myros/
 
 ## Supported Rust Version
@@ -27,3 +29,36 @@ Unstable features that are currently used, or that I expect to use include:
 ["Adding Rust-Stable libstd Support for Xous"]: https://www.crowdsupply.com/sutajio-kosagi/precursor/updates/adding-rust-stable-libstd-support-for-xous
 [`asm`]: https://doc.rust-lang.org/beta/unstable-book/library-features/asm.html
 [`naked_fns`]: https://github.com/nox/rust-rfcs/blob/master/text/1201-naked-fns.md
+
+## Building Aleph OS
+As mentioned above, building Aleph OS requires a nightly verison of Rust. If you don't already have the nightly channel installed, you can do so with the following command:
+```bash
+rustup toolchain install nightly
+```
+
+Aleph OS also uses the [`build-std`] feature. Using thins feature requires the `rust-src` component, which can be installed with the following command:
+```bash
+rustup component add rust-src
+```
+
+To create a bootable disk image, [BOOTBOOT]'s [mkbootimg] is used. You will need to [download][BOOTBOOT downloads] and install it somewhere in your `$PATH`.
+
+After the above software is installed, go to the project's root directory and run one of the following commands:
+```bash
+make # defaults to x86-64
+make arch=x86_64
+make arch=aarch64
+```
+
+If you have [QEMU] installed, any of the following commands will run it in a QEMU virtual machine:
+```bash
+make run #defaults to x86-64
+make run arch=x86_64
+make run arch=aarch64
+```
+
+[`build-std`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
+[BOOTBOOT]: https://gitlab.com/bztsrc/bootboot
+[mkbootimg]: https://gitlab.com/bztsrc/bootboot/-/tree/master/mkbootimg
+[BOOTBOOT downloads]: https://gitlab.com/bztsrc/bootboot/tree/binaries/
+[QEMU]: https://www.qemu.org/
