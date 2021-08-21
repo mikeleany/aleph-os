@@ -1,4 +1,5 @@
 {
+	"disksize": 64,
 	"config": "aleph-os.conf",
 	"initrd": {
 		"type": "tar",

@@ -40,11 +40,11 @@ use bootboot::Console;
 /// [`no_main`]: https://doc.rust-lang.org/stable/reference/crates-and-source-files.html#the-no_main-attribute
 #[export_name = "_start"]
 fn main() -> ! {
-    // set the cursor after the image and custom text which are displayed below
-    Console::get().set_cursor(Point::new(0, 11));
     // initialize the logger
     Console::init().expect("init logger");
 
+    // set the cursor position after the image and custom text which are displayed below
+    Console::get().set_cursor(Point::new(0, 11));
     // display an image
     let tga = DynamicTga::<Rgb888>::from_slice(include_bytes!("../assets/aleph-os.tga"))
         .expect("load TGA image");
