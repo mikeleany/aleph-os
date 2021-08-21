@@ -30,8 +30,17 @@ include $(kernel-target-dir)aleph-os.d
 doc:
 	cargo doc -Z build-std=core,alloc --no-deps --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
 
-run: $(outdir)aleph-os-$(arch).img
-	qemu-system-x86_64 -drive format=raw,file=$(outdir)aleph-os-$(arch).img -bios OVMF.fd
+run: run-$(arch)
+
+run-x86_64: $(outdir)aleph-os-$(arch).img
+	qemu-system-$(arch) -drive format=raw,file=$< -bios OVMF.fd -smp 4
+
+run-aarch64: $(outdir)aleph-os-$(arch).img bootboot/bootboot.img
+	qemu-system-$(arch) -M raspi3 -kernel bootboot/bootboot.img -drive format=raw,file=$<,if=sd
+
+bootboot/bootboot.img:
+	mkdir -pv bootboot
+	curl -o bootboot/bootboot.img https://gitlab.com/bztsrc/bootboot/raw/master/dist/bootboot.img
 
 clean:
 	rm -rfv $(outdir)*
