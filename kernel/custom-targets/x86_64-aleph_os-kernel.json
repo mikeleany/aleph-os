@@ -14,13 +14,8 @@
   "features": "-mmx,-sse,+soft-float",
   "dynamic-linking": false,
   "relocation-model": "pic",
-  "code-model": "kernel",
-  "exe-suffix": ".kernel",
   "has-rpath": false,
   "no-default-libraries": true,
   "position-independent-executables": false,
-  "has-elf-tls": true,
-  "pre-link-args": {
-    "ld.lld": ["--script=custom-targets/x86_64-aleph_os-kernel.ld"]
-  }
+  "has-elf-tls": true
 }

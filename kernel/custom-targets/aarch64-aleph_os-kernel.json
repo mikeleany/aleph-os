@@ -15,11 +15,7 @@
   "features": "+strict-align,+neon,+fp-armv8",
   "dynamic-linking": false,
   "relocation-model": "static",
-  "exe-suffix": ".kernel",
   "has-rpath": false,
   "no-default-libraries": true,
-  "position-independent-executables": false,
-  "pre-link-args": {
-    "ld.lld": ["--script=custom-targets/aarch64-aleph_os-kernel.ld"]
-  }
+  "position-independent-executables": false
 }
