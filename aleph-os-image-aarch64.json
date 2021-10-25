@@ -4,7 +4,7 @@
 	"initrd": {
 		"type": "tar",
 		"gzip": true,
-		"directory": "disk-image/boot"
+		"directory": "target/aarch64/debug/disk-image/boot"
 	},
 	"partitions": [
 		{
@@ -14,7 +14,7 @@
 		{
 			"type": "ext2",
 			"size": "16",
-			"directory": "disk-image",
+			"directory": "target/aarch64/debug/disk-image",
 			"name": "aleph-os"
 		}
 	]

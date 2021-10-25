@@ -7,42 +7,51 @@
 ####################################################################################################
 arch := x86_64
 profile := debug
-cargo-debug-flags := 
-cargo-release-flags := --release
-cargo-flags := $(cargo-$(profile)-flags)
-outdir := target/$(arch)/$(profile)/
-kernel-target-dir := kernel/target/$(arch)-aleph_os-kernel/$(profile)/
 
-$(outdir)aleph-os-$(arch).img: aleph-os-image.json aleph-os.conf $(kernel-target-dir)aleph-os-kernel
-	mkdir -pv $(outdir)disk-image/boot/
-	cp -v aleph-os-image.json aleph-os.conf $(outdir)
-	cp -v $(kernel-target-dir)aleph-os-kernel $(outdir)disk-image/boot/
-	cd $(outdir) && mkbootimg aleph-os-image.json aleph-os-$(arch).img
+ifeq ($(arch),x86_64)
+kernel-target := x86_64-unknown-none
+cargoflags-kernel := --target $(kernel-target).json -Z build-std=core,alloc 
+qemu-drivespec := format=raw
+qemuflags := -bios OVMF.fd -smp 4
+else ifeq ($(arch),aarch64)
+kernel-target := aarch64-unknown-none-softfloat
+cargoflags-kernel := --target $(kernel-target)
+qemu-deps := bootboot/bootboot.img
+qemu-drivespec := format=raw,if=sd
+qemuflags := -M raspi3 -kernel bootboot/bootboot.img
+endif
+rustflags-kernel := -C link-args=--script=aleph-naught.ld -C relocation-model=static
 
-$(kernel-target-dir)aleph-os-kernel $(kernel-target-dir)aleph-os.d: kernel/Cargo.toml
-	cargo clippy -Z build-std=core,alloc --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
-	RUSTFLAGS="-C link-args=--script=aleph-os-kernel.ld" cargo build -Z build-std=core,alloc --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
+ifeq ($(profile),release)
+cargoflags := $(cargoflags) --release
+endif
 
-include $(kernel-target-dir)aleph-os.d
+builddir := target/$(arch)/$(profile)/
+kernel-builddir := kernel/target/$(kernel-target)/$(profile)/
+
+-include $(kernel-builddir)aleph-os.d
+
+$(builddir)aleph-os-$(arch).img: aleph-os-image-$(arch).json aleph-os.conf $(kernel-builddir)aleph-naught
+	mkdir -pv $(builddir)disk-image/boot/
+	cp -v $(kernel-builddir)aleph-naught $(builddir)disk-image/boot/
+	mkbootimg aleph-os-image-$(arch).json $(builddir)aleph-os-$(arch).img
+
+$(kernel-builddir)aleph-naught: kernel/Cargo.toml kernel/aleph-naught.ld
+	cargo clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $<
+	RUSTFLAGS="$(rustflags-kernel)" cargo build $(cargoflags) $(cargoflags-kernel) --manifest-path $<
 
 .PHONY: doc run clean
 
 doc:
-	cargo doc -Z build-std=core,alloc --no-deps --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
+	cargo doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path kernel/Cargo.toml
 
-run: run-$(arch)
-
-run-x86_64: $(outdir)aleph-os-$(arch).img
-	qemu-system-$(arch) -drive format=raw,file=$< -bios OVMF.fd -smp 4
-
-run-aarch64: $(outdir)aleph-os-$(arch).img bootboot/bootboot.img
-	qemu-system-$(arch) -M raspi3 -kernel bootboot/bootboot.img -drive format=raw,file=$<,if=sd
+qemu: $(builddir)aleph-os-$(arch).img $(qemu-deps)
+	qemu-system-$(arch) $(qemuflags) -drive $(qemu-drivespec),file=$<
 
 bootboot/bootboot.img:
 	mkdir -pv bootboot
 	curl -o bootboot/bootboot.img https://gitlab.com/bztsrc/bootboot/raw/master/dist/bootboot.img
 
 clean:
-	cargo clean -Z build-std=core,alloc --manifest-path kernel/Cargo.toml --target kernel/custom-targets/$(arch)-aleph_os-kernel.json $(cargo-flags)
-	rm -rfv $(outdir)*
-	rmdir -pv $(outdir)
+	cargo clean --manifest-path kernel/Cargo.toml
+	rm -rfv target
