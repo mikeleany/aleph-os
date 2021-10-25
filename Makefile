@@ -31,10 +31,10 @@ kernel-builddir := kernel/target/$(kernel-target)/$(profile)/
 
 -include $(kernel-builddir)aleph-os.d
 
-$(builddir)aleph-os-$(arch).img: aleph-os-image-$(arch).json aleph-os.conf $(kernel-builddir)aleph-naught
+$(builddir)aleph-os-$(arch).img: aleph-os-image-$(arch).json aleph-os.conf $(kernel-builddir)aleph-naught bootboot/mkbootimg
 	mkdir -pv $(builddir)disk-image/boot/
 	cp -v $(kernel-builddir)aleph-naught $(builddir)disk-image/boot/
-	mkbootimg aleph-os-image-$(arch).json $(builddir)aleph-os-$(arch).img
+	bootboot/mkbootimg aleph-os-image-$(arch).json $(builddir)aleph-os-$(arch).img
 
 $(kernel-builddir)aleph-naught: kernel/Cargo.toml kernel/aleph-naught.ld
 	cargo clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $<
@@ -47,6 +47,11 @@ doc:
 
 qemu: $(builddir)aleph-os-$(arch).img $(qemu-deps)
 	qemu-system-$(arch) $(qemuflags) -drive $(qemu-drivespec),file=$<
+
+bootboot/mkbootimg:
+	mkdir -pv bootboot
+	curl -o bootboot/mkbootimg.zip https://gitlab.com/bztsrc/bootboot/-/raw/binaries/mkbootimg-Linux.zip
+	unzip -d bootboot/ bootboot/mkbootimg.zip mkbootimg
 
 bootboot/bootboot.img:
 	mkdir -pv bootboot
