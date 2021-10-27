@@ -11,11 +11,13 @@ profile := debug
 ifeq ($(arch),x86_64)
 kernel-target := x86_64-unknown-none
 cargoflags-kernel := --target $(kernel-target).json -Z build-std=core,alloc 
+cargo-toolchain := nightly
 qemu-drivespec := format=raw
 qemuflags := -bios OVMF.fd -smp 4
 else ifeq ($(arch),aarch64)
 kernel-target := aarch64-unknown-none-softfloat
 cargoflags-kernel := --target $(kernel-target)
+cargo-toolchain := stable
 qemu-deps := bootboot/bootboot.img
 qemu-drivespec := format=raw,if=sd
 qemuflags := -M raspi3 -kernel bootboot/bootboot.img
@@ -37,13 +39,13 @@ $(builddir)aleph-os-$(arch).img: aleph-os-image-$(arch).json aleph-os.conf $(ker
 	bootboot/mkbootimg aleph-os-image-$(arch).json $(builddir)aleph-os-$(arch).img
 
 $(kernel-builddir)aleph-naught: kernel/Cargo.toml kernel/aleph-naught.ld
-	cargo clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $<
-	RUSTFLAGS="$(rustflags-kernel)" cargo build $(cargoflags) $(cargoflags-kernel) --manifest-path $<
+	cargo +$(cargo-toolchain) clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $<
+	RUSTFLAGS="$(rustflags-kernel)" cargo +$(cargo-toolchain) build $(cargoflags) $(cargoflags-kernel) --manifest-path $<
 
 .PHONY: doc run clean
 
 doc:
-	cargo doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path kernel/Cargo.toml
+	cargo +$(cargo-toolchain) doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path kernel/Cargo.toml
 
 qemu: $(builddir)aleph-os-$(arch).img $(qemu-deps)
 	qemu-system-$(arch) $(qemuflags) -drive $(qemu-drivespec),file=$<
