@@ -5,10 +5,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 ####################################################################################################
-cargo-features = ["edition2021"]
 
 [package]
-name = "aleph-os"
+name = "aleph-naught"
 version = "0.1.0"
 edition = "2021"
 authors = ["Mike Leany"]

@@ -1,0 +1,21 @@
+{
+	"disksize": 64,
+	"config": "aleph-os.conf",
+	"initrd": {
+		"type": "tar",
+		"gzip": true,
+		"directory": "target/x86_64/debug/disk-image/boot"
+	},
+	"partitions": [
+		{
+			"type": "boot",
+			"size": 16
+		},
+		{
+			"type": "ext2",
+			"size": "16",
+			"directory": "target/x86_64/debug/disk-image",
+			"name": "aleph-os"
+		}
+	]
+}
