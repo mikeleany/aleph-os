@@ -19,7 +19,7 @@ use core::panic::PanicInfo;
 /// It logs an [error][log::error] and halts execution.
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    log::error!("{}", info);
+    log::error!("{info}");
 
     loop {}
 }
