@@ -10,14 +10,14 @@ profile := debug
 
 ifeq ($(arch),x86_64)
 kernel-target := x86_64-unknown-none
-cargoflags-kernel := --target $(kernel-target).json -Z build-std=core,alloc 
+cargoflags-kernel := --target $(kernel-target) -Z build-std=core,alloc 
 cargo-toolchain := nightly
 qemu-drivespec := format=raw
 qemuflags := -bios OVMF.fd -smp 4
 else ifeq ($(arch),aarch64)
 kernel-target := aarch64-unknown-none-softfloat
 cargoflags-kernel := --target $(kernel-target)
-cargo-toolchain := stable
+cargo-toolchain := beta
 qemu-deps := bootboot/bootboot.img
 qemu-drivespec := format=raw,if=sd
 qemuflags := -M raspi3 -kernel bootboot/bootboot.img

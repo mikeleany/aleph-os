@@ -60,7 +60,7 @@ pub struct Console {
 
 impl Console {
     pub fn init() -> Result<(), log::SetLoggerError> {
-        log::set_logger(CONSOLE.deref()).map(|()| log::set_max_level(LevelFilter::Debug))
+        log::set_logger(CONSOLE.deref()).map(|_| log::set_max_level(LevelFilter::Debug))
     }
 
     /// Returns exclusive access to the main [`Framebuffer`].
@@ -77,14 +77,14 @@ impl Log for Console {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             if record.level() >= Level::Info {
-                writeln!(self.fb.lock().deref_mut(), "{}", record.args())
+                writeln!(self.fb.lock().deref_mut(), "{args}", args = record.args())
                     .expect("write log message");
             } else {
                 writeln!(
                     self.fb.lock().deref_mut(),
-                    "{}: {}",
-                    record.level(),
-                    record.args()
+                    "{level}: {args}",
+                    level = record.level(),
+                    args = record.args()
                 )
                 .expect("write log message");
             }

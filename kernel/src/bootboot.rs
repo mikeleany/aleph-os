@@ -113,7 +113,7 @@ impl Bootboot {
             1 => PixelFormat::Rgba,
             2 => PixelFormat::Abgr,
             3 => PixelFormat::Bgra,
-            t => panic!("BOOTBOOT.fb_type has an invalid value: {}", t),
+            t => panic!("BOOTBOOT.fb_type has an invalid value: {t}"),
         }
     }
 }
