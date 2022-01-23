@@ -10,7 +10,7 @@ profile := debug
 
 ifeq ($(arch),x86_64)
 kernel-target := x86_64-unknown-none
-cargoflags-kernel := --target $(kernel-target) -Z build-std=core,alloc 
+cargoflags-kernel := --target $(kernel-target) -Z build-std=core
 cargo-toolchain := nightly
 qemu-drivespec := format=raw
 qemuflags := -bios OVMF.fd -smp 4
@@ -31,7 +31,7 @@ endif
 builddir := target/$(arch)/$(profile)/
 kernel-builddir := kernel/target/$(kernel-target)/$(profile)/
 
--include $(kernel-builddir)aleph-os.d
+-include $(kernel-builddir)aleph-naught.d
 
 $(builddir)aleph-os-$(arch).img: aleph-os-image-$(arch).json aleph-os.conf $(kernel-builddir)aleph-naught bootboot/mkbootimg
 	mkdir -pv $(builddir)disk-image/boot/
