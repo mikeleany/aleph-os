@@ -21,6 +21,7 @@ categories = ["os", "no-std", "embedded"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+crossbeam-utils = { version = "0.8.6", default-features = false }
 embedded-graphics = "0.7.1"
 lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
 log = "0.4.14"
