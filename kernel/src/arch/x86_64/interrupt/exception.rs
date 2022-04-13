@@ -515,7 +515,7 @@ mod error_codes {
     use core::ops::Deref;
 
     #[cfg(doc)]
-    use super::{PageFault, ControlProtectionException, VmmCommunication, SecurityException};
+    use super::{ControlProtectionException, PageFault, SecurityException, VmmCommunication};
 
     /// Aligns a type to 64 bits, to make the type safe to use for an interrupt error code.
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
