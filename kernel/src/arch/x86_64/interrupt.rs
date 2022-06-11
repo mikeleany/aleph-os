@@ -150,11 +150,13 @@ where
 }
 
 /// User interrupts.
+// SAFETY: user interrupts do not pass an error code and are not abort exceptions, so the default
+// `ErrorCode` and `Return` types can and should be used. This safety comment applies to all
+// `unsafe impl`s in this module.
+#[allow(clippy::undocumented_unsafe_blocks)]
 mod user {
     use super::{Interrupt, Param};
 
-    // SAFETY: user interrupts do not pass an error code and are not abort exceptions, so the default
-    // `ErrorCode` and `Return` types can and should be used.
     unsafe impl Param for Interrupt<0x20> {}
     unsafe impl Param for Interrupt<0x21> {}
     unsafe impl Param for Interrupt<0x22> {}

@@ -42,9 +42,10 @@ extern "C" {
 }
 
 /// A safe reference to the BOOTBOOT information structure.
-pub static BOOTBOOT: &Bootboot =
+pub static BOOTBOOT: &Bootboot = {
     // SAFETY: the kernel must be loaded by a BOOTBOOT-compliant loader
-    unsafe { &BOOTBOOT_EXT };
+    unsafe { &BOOTBOOT_EXT }
+};
 
 /// The color format for a pixel in the [`FRAMEBUFFER`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

@@ -10,7 +10,7 @@ profile := debug
 
 ifeq ($(arch),x86_64)
 kernel-target := x86_64-unknown-none
-cargoflags-kernel := --target $(kernel-target) -Z build-std=core
+cargoflags-kernel := --target $(kernel-target)
 cargo-toolchain := nightly
 qemu-drivespec := format=raw
 qemuflags := -bios OVMF.fd -smp 4
