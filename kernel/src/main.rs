@@ -64,6 +64,9 @@ fn main() -> ! {
     line.draw(Console::get().deref_mut())
         .expect("printing text");
 
+    aleph_naught::arch::init();
+
     log::info!("Hello world!");
+    let _ = unsafe { (0x8000_0000_0000_0000 as *const u8).read_volatile() };
     panic!("testing the panic handler");
 }

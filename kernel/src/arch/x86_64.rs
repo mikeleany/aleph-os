@@ -8,6 +8,7 @@
 //! Functionality specific to the `x86_64` architecture.
 
 pub mod interrupt;
+pub use interrupt::init;
 
 /// Provides functions and structures for segmentation.
 ///

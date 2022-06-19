@@ -17,6 +17,8 @@ use idt::InterruptDescriptorTable;
 pub fn init() -> &'static InterruptDescriptorTable {
     static IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
 
+    IDT.handler::<8>();
+
     // SAFETY: the table and interrupt handlers will remain in memory until system restart
     unsafe {
         IDT.load();
