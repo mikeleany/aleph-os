@@ -9,7 +9,6 @@
 #![doc(html_logo_url = "https://mikeleany.github.io/images/aleph-os.png")]
 #![no_std]
 #![feature(abi_x86_interrupt)]
-#![feature(asm_sym)]
 #![feature(associated_type_defaults)]
 #![feature(const_option)]
 #![feature(never_type)]

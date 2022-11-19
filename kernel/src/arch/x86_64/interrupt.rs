@@ -6,6 +6,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //! Interrupts, interrupt handlers, and the interrupt descriptor table (IDT).
+use self::exception::{
+    ControlProtectionErrorCode, PageFaultErrorCode, SecurityErrorCode, SelectorErrorCode,
+    VmExitCode,
+};
+
 use super::segment::Selector;
 use core::cell::UnsafeCell;
 
@@ -25,6 +30,99 @@ pub fn init() -> &'static InterruptDescriptorTable {
     }
 
     &IDT
+}
+
+pub trait IntReturn {}
+impl IntReturn for () {}
+impl IntReturn for ! {}
+pub struct InterruptHandler<E = (), R: IntReturn = ()>(
+    extern "x86-interrupt" fn(StackFrame<E>) -> R,
+);
+
+pub struct ExceptionTable {
+    pub divide_by_zero: Option<InterruptHandler>,
+    pub debug: Option<InterruptHandler>,
+    pub non_maskable_interrupt: Option<InterruptHandler>,
+    pub breakpoint: Option<InterruptHandler>,
+    pub overflow: Option<InterruptHandler>,
+    pub bound_range: Option<InterruptHandler>,
+    pub invalid_opcode: Option<InterruptHandler>,
+    pub device_not_available: Option<InterruptHandler>,
+    pub double_fault: Option<InterruptHandler<Option<SelectorErrorCode>, !>>,
+    pub invalid_tss: Option<InterruptHandler<Option<SelectorErrorCode>>>,
+    pub segment_not_present: Option<InterruptHandler<Option<SelectorErrorCode>>>,
+    pub stack: Option<InterruptHandler<Option<SelectorErrorCode>>>,
+    pub general_protection: Option<InterruptHandler<Option<SelectorErrorCode>>>,
+    pub page_fault: Option<InterruptHandler<PageFaultErrorCode>>,
+    pub x87_floating_point: Option<InterruptHandler>,
+    pub alignment_check: Option<InterruptHandler<Option<SelectorErrorCode>>>,
+    pub machine_check: Option<InterruptHandler<(), !>>,
+    pub simd_floating_point: Option<InterruptHandler>,
+    pub control_protection: Option<InterruptHandler<ControlProtectionErrorCode>>,
+    pub hypervisor_injection: Option<InterruptHandler>,
+    pub vmm_communication: Option<InterruptHandler<VmExitCode>>,
+    pub security: Option<InterruptHandler<SecurityErrorCode>>,
+}
+
+impl ExceptionTable {
+    pub const fn new() -> Self {
+        ExceptionTable {
+            divide_by_zero: None,
+            debug: None,
+            non_maskable_interrupt: None,
+            breakpoint: None,
+            overflow: None,
+            bound_range: None,
+            invalid_opcode: None,
+            device_not_available: None,
+            double_fault: None,
+            invalid_tss: None,
+            segment_not_present: None,
+            stack: None,
+            general_protection: None,
+            page_fault: None,
+            x87_floating_point: None,
+            alignment_check: None,
+            machine_check: None,
+            simd_floating_point: None,
+            control_protection: None,
+            hypervisor_injection: None,
+            vmm_communication: None,
+            security: None,
+        }
+    }
+}
+
+static EXCEPTION_HANDLERS: ExceptionTable = {
+    let mut exceptions = ExceptionTable::new();
+
+    extern "x86-interrupt" fn double_fault(_: StackFrame<Option<SelectorErrorCode>>) -> ! {
+        log::error!("\t\t***DOUBLE FAULT EXCEPTION***");
+        panic!("double fault");
+    }
+    exceptions.double_fault = Some(InterruptHandler(double_fault));
+
+    exceptions
+};
+
+pub struct UserVector(Vector);
+
+impl UserVector {
+    pub fn try_from_vector(v: Vector) -> Result<Self, ()> {
+        if v >= 32 {
+            Ok(UserVector(v))
+        } else {
+            Err(())
+        }
+    }
+}
+
+pub struct UserInterruptTable([Option<InterruptHandler>; 256 - 32]);
+
+impl UserInterruptTable {
+    pub const fn get(&self, v: UserVector) -> Option<InterruptHandler> {
+        todo!()
+    }
 }
 
 /// An interrupt vector number, which can be any number from 0 through 255.

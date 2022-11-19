@@ -6,7 +6,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-core::arch::global_asm!(r"
+core::arch::global_asm!(
+    r"
     .global vector_table
     .balign 4096
     vector_table:
@@ -25,7 +26,8 @@ core::arch::global_asm!(r"
         b exception_handler
     .balign 128
         b exception_handler
-");
+"
+);
 
 extern "C" {
     pub fn vector_table();
