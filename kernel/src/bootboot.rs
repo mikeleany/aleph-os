@@ -17,7 +17,7 @@ extern "C" {
     ///
     /// Imported from the symbol `bootboot`.
     ///
-    /// # SAFETY
+    /// # Safety
     /// This static is always safe to use assuming the kernel is loaded by a BOOTBOOT-compliant
     /// loader.
     /// Use [`BOOTBOOT`] instead to avoide using the `unsafe` keyword.
@@ -28,7 +28,7 @@ extern "C" {
     ///
     /// Imported from the symbol `fb`.
     ///
-    /// # SAFETY
+    /// # Safety
     /// For safe use of this structure, all of the following conditions must be met.
     /// - the kernel must be loaded by a BOOTBOOT-compliant loader.
     /// - as with all mutable statics, the user ensure that access is synchronized between threads
@@ -42,8 +42,10 @@ extern "C" {
 }
 
 /// A safe reference to the BOOTBOOT information structure.
-// SAFETY: the kernel must be loaded by a BOOTBOOT-compliant loader
-pub static BOOTBOOT: &Bootboot = unsafe { &BOOTBOOT_EXT };
+pub static BOOTBOOT: &Bootboot = {
+    // SAFETY: the kernel must be loaded by a BOOTBOOT-compliant loader
+    unsafe { &BOOTBOOT_EXT }
+};
 
 /// The color format for a pixel in the [`FRAMEBUFFER`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

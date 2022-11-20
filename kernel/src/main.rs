@@ -15,6 +15,7 @@
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 #![warn(clippy::todo)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 #![warn(clippy::unwrap_used)]
 use core::ops::DerefMut as _;
 use embedded_graphics::{
