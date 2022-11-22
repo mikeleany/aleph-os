@@ -16,7 +16,6 @@
 #![warn(unused_extern_crates)]
 #![warn(clippy::todo)]
 #![warn(clippy::undocumented_unsafe_blocks)]
-#![warn(clippy::unwrap_used)]
 use core::ops::DerefMut as _;
 use embedded_graphics::{
     image::Image,
@@ -63,6 +62,14 @@ fn main() -> ! {
     );
     line.draw(Console::get().deref_mut())
         .expect("printing text");
+
+    aleph_naught::arch::init();
+
+    #[cfg(target_arch = "x86_64")]
+    // SAFETY: the `ud2` instruction cannot trigger undefined behavior
+    unsafe {
+        core::arch::asm!("ud2");
+    }
 
     log::info!("Hello world!");
     panic!("testing the panic handler");
