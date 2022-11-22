@@ -11,7 +11,7 @@ profile := debug
 ifeq ($(arch),x86_64)
 kernel-target := x86_64-unknown-none
 cargoflags-kernel := --target $(kernel-target)
-cargo-toolchain := stable
+cargo-toolchain := nightly
 qemu-drivespec := format=raw
 qemuflags := -bios OVMF.fd -smp 4
 else ifeq ($(arch),aarch64)
@@ -43,10 +43,15 @@ $(kernel-builddir)aleph-naught: kernel/Cargo.toml kernel/aleph-naught.ld
 	cargo +$(cargo-toolchain) clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $<
 	RUSTFLAGS="$(rustflags-kernel)" cargo +$(cargo-toolchain) build $(cargoflags) $(cargoflags-kernel) --manifest-path $<
 
-.PHONY: doc run clean
+.PHONY: doc run clean commit-ready
 
-doc:
-	cargo +$(cargo-toolchain) doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path kernel/Cargo.toml
+doc: kernel/Cargo.toml kernel/aleph-naught.ld
+	cargo +$(cargo-toolchain) doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path $<
+
+commit-ready: kernel/Cargo.toml kernel/aleph-naught.ld
+	cargo +$(cargo-toolchain) fmt $(cargoflags) --manifest-path $<
+	cargo +$(cargo-toolchain) clippy $(cargoflags) $(cargoflags-kernel) --manifest-path $< -- -D warnings
+	RUSTDOCFLAGS="-Dwarnings" cargo +$(cargo-toolchain) doc $(cargoflags) $(cargoflags-kernel) --no-deps --manifest-path $<
 
 qemu: $(builddir)aleph-os-$(arch).img $(qemu-deps)
 	qemu-system-$(arch) $(qemuflags) -drive $(qemu-drivespec),file=$<
