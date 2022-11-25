@@ -59,6 +59,7 @@ pub struct Console {
 }
 
 impl Console {
+    /// Perform console initialization.
     pub fn init() -> Result<(), log::SetLoggerError> {
         log::set_logger(CONSOLE.deref()).map(|_| log::set_max_level(LevelFilter::Debug))
     }
@@ -141,7 +142,7 @@ impl Framebuffer {
     };
     const TAB: &'static str = "        ";
 
-    pub fn cursor_pixel(&self) -> Point {
+    pub(crate) fn cursor_pixel(&self) -> Point {
         self.cursor.component_mul(Point::zero() + Self::FONT_SIZE)
     }
 
