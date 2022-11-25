@@ -10,7 +10,9 @@
 //! [BOOTBOOT]: https://gitlab.com/bztsrc/bootboot
 
 mod framebuffer;
-pub use framebuffer::Console;
+use core::{mem::size_of, ops::Range, slice};
+
+pub use framebuffer::{Console, Framebuffer};
 
 extern "C" {
     /// The BOOTBOOT information structure.
@@ -20,7 +22,7 @@ extern "C" {
     /// # Safety
     /// This static is always safe to use assuming the kernel is loaded by a BOOTBOOT-compliant
     /// loader.
-    /// Use [`BOOTBOOT`] instead to avoide using the `unsafe` keyword.
+    /// Use [`BOOTBOOT`] instead to avoid using the `unsafe` keyword.
     #[link_name = "bootboot"]
     pub static BOOTBOOT_EXT: Bootboot;
 
@@ -62,7 +64,7 @@ pub enum PixelFormat {
 
 /// The BOOTBOOT information structure.
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct Bootboot {
     /// The BOOTBOOT magic value which must be the byte string `b"BOOT"`
     pub magic: [u8; 4],
@@ -104,7 +106,7 @@ pub struct Bootboot {
     #[cfg(target_arch = "aarch64")]
     pub arch: ArchAarch64,
     /// The beginning of the memory map.
-    pub mmap: [MMapEnt; 0],
+    mmap: [MMapEnt; 0],
 }
 
 impl Bootboot {
@@ -116,6 +118,26 @@ impl Bootboot {
             2 => PixelFormat::Abgr,
             3 => PixelFormat::Bgra,
             t => panic!("BOOTBOOT.fb_type has an invalid value: {t}"),
+        }
+    }
+
+    /// Returns a reference to the memory map.
+    pub fn memory_map(&self) -> &[MMapEnt] {
+        let n = (self.size as usize - size_of::<Self>()) / size_of::<MMapEnt>();
+
+        // SAFETY: BOOTBOOT guarantees that this memory is used for the memory map
+        // TODO: determine if pointer provenance still makes this unsound
+        unsafe { slice::from_raw_parts(self.mmap.as_ptr(), n) }
+    }
+
+    /// Returns an iterator over free frames of memory.
+    pub fn free_frames<const FRAME_SIZE: u64>(&'static self) -> FreeFrames<FRAME_SIZE> {
+        const { assert!(FRAME_SIZE.is_power_of_two()) };
+
+        let mem_map = self.memory_map().iter();
+        FreeFrames {
+            mem_map,
+            frames: 0..0,
         }
     }
 }
@@ -153,7 +175,86 @@ pub struct ArchAarch64 {
 #[derive(Debug, Copy, Clone)]
 pub struct MMapEnt {
     /// The physical memory address.
-    pub ptr: u64,
+    ptr: u64,
     /// The size in bytes.
-    pub size: u64,
+    size: u64,
+}
+
+impl MMapEnt {
+    /// Returns the 64-bit physical address of the memory region.
+    pub fn address(&self) -> u64 {
+        self.ptr
+    }
+
+    /// Returns the 64-bit length of the memory region.
+    pub fn size(&self) -> u64 {
+        self.size & !0xf
+    }
+
+    /// Returns `true` if the memory region contains the given address.
+    pub fn contains(&self, value: u64) -> bool {
+        value >= self.address() && value - self.address() < self.size()
+    }
+
+    /// Returns the state of the memory region.
+    pub fn mem_type(&self) -> MemType {
+        match self.size & 0xf {
+            1 => MemType::Free,
+            2 => MemType::Acpi,
+            3 => MemType::Mmio,
+            _ => MemType::Used,
+        }
+    }
+}
+
+/// A type of memory.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MemType {
+    /// The memory is currently used.
+    Used = 0,
+    /// The memory is available for use.
+    Free = 1,
+    /// The memory is used for ACPI.
+    Acpi = 2,
+    /// The memory is used for memory-mapped I/O.
+    Mmio = 3,
+}
+
+/// An iterator over free frames of memory.
+#[derive(Debug, Clone)]
+pub struct FreeFrames<const FRAME_SIZE: u64> {
+    mem_map: slice::Iter<'static, MMapEnt>,
+    frames: Range<u64>,
+}
+
+impl<const FRAME_SIZE: u64> Iterator for FreeFrames<FRAME_SIZE> {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        const { assert!(FRAME_SIZE.is_power_of_two()) };
+        let frame_mask: u64 = FRAME_SIZE - 1;
+
+        let mut frame = self.frames.next();
+
+        while frame.is_none() {
+            if let Some(mmap_ent) = self.mem_map.next() {
+                if mmap_ent.mem_type() != MemType::Free {
+                    continue;
+                }
+                let offset = mmap_ent.address() & frame_mask;
+                let start = mmap_ent.address() / FRAME_SIZE;
+                let (start, len) = if offset == 0 {
+                    (start, mmap_ent.size() / FRAME_SIZE)
+                } else {
+                    (start + 1, (mmap_ent.size() - offset) / FRAME_SIZE)
+                };
+
+                self.frames = start..(start + len);
+                frame = self.frames.next();
+            }
+        }
+
+        frame.map(|frame| frame * FRAME_SIZE)
+    }
 }
