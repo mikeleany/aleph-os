@@ -15,7 +15,9 @@
 #![warn(unused_extern_crates)]
 #![warn(clippy::todo)]
 #![warn(clippy::undocumented_unsafe_blocks)]
+#![feature(inline_const)]
 #![cfg_attr(target_arch = "x86_64", feature(asm_const))]
 #![cfg_attr(target_arch = "x86_64", feature(naked_functions))]
 
 pub mod arch;
+pub mod bootboot;
