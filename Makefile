@@ -17,7 +17,7 @@ qemuflags := -bios OVMF.fd -smp 4
 else ifeq ($(arch),aarch64)
 kernel-target := aarch64-unknown-none-softfloat
 cargoflags-kernel := --target $(kernel-target)
-cargo-toolchain := stable
+cargo-toolchain := nightly
 qemu-deps := bootboot/bootboot.img
 qemu-drivespec := format=raw,if=sd
 qemuflags := -M raspi3b -kernel bootboot/bootboot.img

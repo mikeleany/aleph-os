@@ -27,10 +27,9 @@ use embedded_graphics::{
 use rlibc as _; // needed for `memcpy`, etc when using `--build-std`
 use tinytga::DynamicTga;
 
-mod bootboot;
 #[cfg(not(test))]
 mod panic_handler;
-use bootboot::Console;
+use aleph_naught::bootboot::Console;
 
 /// The kernel's entry point.
 ///
