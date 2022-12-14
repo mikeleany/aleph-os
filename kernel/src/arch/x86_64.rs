@@ -10,11 +10,23 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use x86_64::{
-    structures::{idt::InterruptDescriptorTable, DescriptorTablePointer},
-    VirtAddr,
+    structures::{
+        idt::InterruptDescriptorTable,
+        paging::{PageSize, Size4KiB},
+        DescriptorTablePointer,
+    },
+    PhysAddr, VirtAddr,
 };
 
 use interrupt::IntVec;
+
+use crate::{
+    arch::mem::{PageMapping, PHYSICAL_MEMORY_MAP_MAX_SIZE},
+    bootboot::{BOOTBOOT, IDENTITY_MAP_MAX},
+    mem::{Pager, PhysicalAddress},
+};
+
+pub mod mem;
 
 /// Performs initialization required for `x86_64`.
 pub fn init() {
@@ -53,6 +65,34 @@ pub fn init() {
 
     // SAFETY: `idt_ptr` is a valid pointer to `IDT`
     unsafe { x86_64::instructions::tables::lidt(&idt_ptr) };
+
+    let mmap_ent = BOOTBOOT.memory_map().last().unwrap();
+    let mem_size = mmap_ent
+        .address()
+        .saturating_add(mmap_ent.size())
+        .try_into()
+        .unwrap();
+    let mem_size = usize::min(mem_size, PHYSICAL_MEMORY_MAP_MAX_SIZE);
+    let id_map_size = usize::min(mem_size, IDENTITY_MAP_MAX);
+
+    let mut free_frames = BOOTBOOT
+        .free_frames::<{ Size4KiB::SIZE }>()
+        .map(|addr| PhysAddr::from_usize(addr.try_into().unwrap()).unwrap());
+
+    let null_frame = free_frames.next();
+
+    // SAFETY:
+    // - `PHYSICAL_ADDRESS_MAP.base()` is reserved for the physical memory map for up to
+    //   `PHYSICAL_MEMORY_MAP_MAX_SIZE` bytes.
+    // - `mem_size` is no larger than `PHYSICAL_MEMORY_MAP_MAX_SIZE`.
+    // - BOOTBOOT identity maps the entire physical memory space up to `IDENTITY_MAP_MAX` bytes,
+    //   and `id_map_size` is the smaller of `mem_size` and `IDENTITY_MAP_MAX`.
+    // - The frames in `free_frames` are available for use.
+    // - Only those frames remaining after this call will be pushed to the frame allocater.
+    // - The frame at address 0 has been removed from `free_frames`.
+    unsafe {
+        PageMapping::map_physical_mem(mem_size, id_map_size, &mut free_frames).unwrap();
+    }
 }
 
 pub mod interrupt {

@@ -14,6 +14,9 @@ use core::{mem::size_of, ops::Range, slice};
 
 pub use framebuffer::{Console, Framebuffer};
 
+/// The maximum amount of physical memory which the BOOTBOOT loader will identity map.
+pub const IDENTITY_MAP_MAX: usize = 0x4_0000_0000;
+
 extern "C" {
     /// The BOOTBOOT information structure.
     ///
